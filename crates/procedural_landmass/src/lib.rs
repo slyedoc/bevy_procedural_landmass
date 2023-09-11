@@ -44,7 +44,8 @@ impl Plugin for ProceduralLandmassPlugin {
         .register_type::<TerrainGenerator>()
         .register_type::<EndlessTerrain>()
         .register_type::<TerrainChunk>()
-        .register_type::<TerrainRegions>();
+        .register_type::<TerrainRegions>()
+        .register_type::<TerrainType>();
     }
 }
 
@@ -52,7 +53,7 @@ fn update_endless(mut query: Query<&mut EndlessTerrain>, generator: Res<TerrainG
     if let Ok(mut endless) = query.get_single_mut() {
         if generator.is_changed() || endless.is_changed() {
             endless.chunks_visable_in_view_distance =
-                (endless.max_view_distance / generator.chunk_size as f32) as usize;
+                (endless.max_view_distance / generator.world_scale as f32) as usize;
         }
     }
 }
@@ -71,15 +72,15 @@ fn create_chunks(
     generator: Res<TerrainGenerator>,
 ) {
     if let Ok((mut endless, trans)) = endless_query.get_single_mut() {
-        let current_chunk_coord_x = (trans.translation().x / generator.chunk_size as f32) as i32;
-        let current_chunk_coord_y = (trans.translation().z / generator.chunk_size as f32) as i32;
+        let current_chunk_coord_x =  (trans.translation().x  / generator.world_scale as f32) as i32;
+        let current_chunk_coord_y = (trans.translation().z / generator.world_scale as f32) as i32;
 
         let chunks_visable_in_view_distance = endless.chunks_visable_in_view_distance as i32;
-        for y_offset in -chunks_visable_in_view_distance..=chunks_visable_in_view_distance {
-            for x_offset in -chunks_visable_in_view_distance..=chunks_visable_in_view_distance {
+        for y in -chunks_visable_in_view_distance..=chunks_visable_in_view_distance {
+            for x in -chunks_visable_in_view_distance..=chunks_visable_in_view_distance {
                 let chunk_coord = IVec2::new(
-                    current_chunk_coord_x + x_offset,
-                    current_chunk_coord_y + y_offset,
+                    current_chunk_coord_x + x,
+                    current_chunk_coord_y + y,
                 );
 
                 if endless.terrain_chunks.contains_key(&chunk_coord) {
@@ -88,7 +89,6 @@ fn create_chunks(
                     let entity = commands
                         .spawn((TerrainChunkBundle::new(
                             chunk_coord,
-                            generator.chunk_size,
                             false,
                         ),))
                         .id();
@@ -100,24 +100,37 @@ fn create_chunks(
 }
 
 fn update_chunk_visablity(
-    mut query: Query<(&mut Visibility, &GlobalTransform), With<TerrainChunk>>,
-    mut endless_query: Query<(&EndlessTerrain, &GlobalTransform)>,
-    // mut gizmos: Gizmos
+    mut query: Query<(&mut Visibility, &Transform), With<TerrainChunk>>,
+    mut endless_query: Query<(&EndlessTerrain, &Transform)>,
+    generator: Res<TerrainGenerator>,
+    //mut gizmos: Gizmos
 ) {
     if let Ok((endless, e_trans)) = endless_query.get_single_mut() {
-        let endless_translation = e_trans.translation();
+        let endless_translation = e_trans.translation;
+        let half_world_size = generator.world_scale as f32 / 2.0;
+
+        // check terrain corners
+        let corners = vec![
+            Vec3::new(-half_world_size, 0.0, -half_world_size),
+            Vec3::new(half_world_size, 0.0, -half_world_size),
+            Vec3::new(-half_world_size, 0.0, half_world_size),
+            Vec3::new(half_world_size, 0.0, half_world_size),
+        ];
+
         // gizmos.circle( Vec3::new(endless_translation.x, 0.0, endless_translation.z), Vec3::Y, endless.max_view_distance, Color::GREEN);
 
         for (mut vis, chunk_trans) in query.iter_mut() {
-            let chuck_translation = chunk_trans.translation();
+            let chuck_translation = chunk_trans.translation;
 
-            let e_pos = Vec2::new(endless_translation.x, endless_translation.z);
-            let t_pos = Vec2::new(chuck_translation.x, chuck_translation.z);
+            let mut visable = false;            
+            for corner in corners.iter() {                
+                // gizmos.line( chuck_translation + *corner, chuck_translation + vec3(0.0, 50.0, 0.0), Color::RED);                
+                if endless_translation.distance(chuck_translation + *corner) <= endless.max_view_distance {
+                    visable = true;                
+                }
+            }
 
-            // TODO: check terrain corners
-
-            let dst = e_pos.distance(t_pos);
-            *vis = match dst <= endless.max_view_distance {
+            *vis = match visable {
                 true => Visibility::Visible,
                 false => Visibility::Hidden,
             }
@@ -128,8 +141,8 @@ fn update_chunk_visablity(
 struct ComputeResult {
     image: Image,
     mesh: Mesh,
+    #[allow(dead_code)]
     noise_map: NoiseMap,
-    chunk_size: usize,
     world_scale: f32,
 }
 
@@ -138,14 +151,14 @@ struct ComputeChunk(Task<ComputeResult>);
 
 fn spawn_chunk_tasks(
     mut commands: Commands,
-    mut query: Query<(Entity, &TerrainChunk, Option<&mut ComputeChunk>), Changed<TerrainChunk>>,
-    mut generator: ResMut<TerrainGenerator>,
+    query: Query<(Entity, &TerrainChunk, Option<&ComputeChunk>), Changed<TerrainChunk>>,
+    generator: ResMut<TerrainGenerator>,
 ) {
     let thread_pool = AsyncComputeTaskPool::get();
     // create a arc of the generator to share with the thread pool
     let generator_arc = Arc::new(generator.clone());
-    for (e, chunk, mut compute) in query.iter_mut() {
-        if let Some(mut c) = compute {
+    for (e, chunk, compute) in query.iter() {
+        if compute.is_some() {
             // drop the old task
             commands.entity(e).remove::<ComputeChunk>();
         }
@@ -185,8 +198,7 @@ fn spawn_chunk_tasks(
             ComputeResult {
                 image,
                 mesh,
-                noise_map,
-                chunk_size: generator.chunk_size,
+                noise_map,                
                 world_scale: generator.world_scale,
             }
         });

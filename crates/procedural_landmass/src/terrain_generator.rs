@@ -33,19 +33,19 @@ pub struct TerrainGenerator {
 impl Default for TerrainGenerator {
     fn default() -> Self {
         Self {
-            chunk_size: 241,
+            chunk_size: 10,
 
-            texture_mode: TerrainTextureMode::HeightMap,
+            texture_mode: TerrainTextureMode::Color,
             mesh_mode: TerrainMeshMode::Smooth,
             sampler: TerrainSampler::Linear,
-            height_multiplier: 0.0,
+            height_multiplier: 0.3,
             noise_scale: 1.0,
             octaves: 4,
             gain: 0.5,
             lacunarity: 2.0,
             seed: 0.0,
             offset: Vec2::ZERO,
-            world_scale: 200.0,
+            world_scale: 100.0,
             regions: TerrainRegions::default(),
         }
     }

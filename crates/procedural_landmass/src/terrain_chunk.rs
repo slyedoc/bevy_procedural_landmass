@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use bevy::{
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
@@ -43,13 +41,9 @@ impl Default for TerrainChunkBundle {
 }
 
 impl TerrainChunkBundle {
-    pub fn new(position: IVec2, size: usize, visable: bool) -> Self {
+    pub fn new(position: IVec2, visable: bool) -> Self {
         Self {
             terrain: TerrainChunk::new(position),
-            transform: Transform {
-                translation: Vec3::new(position.x as f32, 0.0, position.y as f32) * size as f32,
-                ..Default::default()
-            },
             visibility: match visable {
                 true => Visibility::Visible,
                 false => Visibility::Hidden,
@@ -80,7 +74,6 @@ impl TerrainChunk {
     }
 
     pub fn update_noise_map(&self, generator: &TerrainGenerator) -> NoiseMap {
-        let start = Instant::now();
         let mut noise_map = vec![vec![0f32; generator.chunk_size]; generator.chunk_size];
 
         if generator.noise_scale < 0.0 {
@@ -123,9 +116,6 @@ impl TerrainChunk {
                     .abs();
             }
         }
-        let end = Instant::now();
-        println!("Noise map generation took: {:?}", end - start);
-
         noise_map
     }
 

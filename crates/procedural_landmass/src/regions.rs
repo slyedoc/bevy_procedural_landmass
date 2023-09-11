@@ -57,9 +57,11 @@ impl TerrainRegions {
     }
 }
 
-#[derive(Clone, Debug, Reflect)]
+#[derive(Clone, Debug, Reflect, InspectorOptions)]
+#[reflect(InspectorOptions)]
 pub struct TerrainType {
     pub name: String,
     pub color: Color,
+    #[inspector(min = 0.0, max = 1.0, speed = 0.01)]    
     pub height: f32,
 }
