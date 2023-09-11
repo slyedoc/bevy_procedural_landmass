@@ -1,0 +1,11 @@
+[package]
+name = "example_common"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = { version = "0.11.2" }
+bevy-inspector-egui = { version = "0.19.0" }
+bevy_panorbit_camera = { version = "0.8.0" }
+bevy_spectator = { version = "0.3.0" }
+bevy_atmosphere = { version = "0.7.0" }

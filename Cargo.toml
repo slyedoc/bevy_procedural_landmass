@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "crates/example_common",
+    "crates/procedural_landmass"
+]
+resolver = "2"

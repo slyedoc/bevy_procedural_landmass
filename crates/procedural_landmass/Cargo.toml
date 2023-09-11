@@ -1,0 +1,15 @@
+[package]
+name = "procedural_landmass"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.11.2"
+bevy-inspector-egui = "0.19"
+futures-lite = "1.11.3"
+noisy_bevy = "0.4"
+
+[dev-dependencies]
+example_common = { path = "../example_common" }
+
+
