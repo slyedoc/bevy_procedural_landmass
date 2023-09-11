@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_variables)]
-use bevy::{prelude::*, input::keyboard};
+use bevy::prelude::*;
 use example_common::prelude::*;
 use procedural_landmass::*;
 
@@ -49,23 +49,13 @@ fn setup(
         Name::new("Origin"),
     ));
 
-    // commands.spawn((
-    //     TerrainChunkBundle {
-    //         terrain: TerrainChunk::default(),
-    //         transform: Transform {
-    //             scale: Vec3::splat(100.0),
-    //             ..default()
-    //         },
-    //         ..default()
-    //     },
-    //     Name::new("TerrainChunk"),
-    // ));
+    commands.spawn(TerrainChunkBundle::default());
 }
 
 fn toggle_wireframe(
     terrain_wireframe: Res<State<TerrainWireframeMode>>,
     mut next_state: ResMut<NextState<TerrainWireframeMode>>,
-    keyboard_input: Res<Input<KeyCode>>,    
+    keyboard_input: Res<Input<KeyCode>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Key1) {
         match terrain_wireframe.get() {

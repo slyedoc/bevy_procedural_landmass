@@ -33,7 +33,7 @@ pub struct TerrainGenerator {
 impl Default for TerrainGenerator {
     fn default() -> Self {
         Self {
-            chunk_size: 10,
+            chunk_size: 50,
 
             texture_mode: TerrainTextureMode::Color,
             mesh_mode: TerrainMeshMode::Smooth,

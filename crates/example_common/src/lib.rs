@@ -7,7 +7,6 @@ use bevy::{
     text::DEFAULT_FONT_HANDLE, pbr::wireframe::WireframePlugin,
 };
 use bevy_atmosphere::prelude::AtmospherePlugin;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 pub mod prelude {
     pub use crate::ExampleCommonPlugin;
@@ -21,7 +20,7 @@ impl Plugin for ExampleCommonPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((
             FrameTimeDiagnosticsPlugin,
-            WorldInspectorPlugin::new(),
+            // WorldInspectorPlugin::new(),
             WireframePlugin,
             CameraControllerPlugin,
             AtmospherePlugin,
