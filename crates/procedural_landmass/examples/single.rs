@@ -37,17 +37,17 @@ fn setup(
     });
 
     // origin marker
-    commands.spawn((
-        PbrBundle {
-            material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
-            mesh: meshes.add(Mesh::from(shape::Plane {
-                size: 10.0,
-                subdivisions: 10,
-            })),
-            ..default()
-        },
-        Name::new("Origin"),
-    ));
+    // commands.spawn((
+    //     PbrBundle {
+    //         material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+    //         mesh: meshes.add(Mesh::from(shape::Plane {
+    //             size: 10.0,
+    //             subdivisions: 10,
+    //         })),
+    //         ..default()
+    //     },
+    //     Name::new("Origin"),
+    // ));
 
     commands.spawn(TerrainChunkBundle::default());
 }

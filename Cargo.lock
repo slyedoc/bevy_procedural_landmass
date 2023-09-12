@@ -518,6 +518,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_curve_editor"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "bevy-inspector-egui",
+ "pretty-type-name",
+]
+
+[[package]]
 name = "bevy_derive"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

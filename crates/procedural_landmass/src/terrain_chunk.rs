@@ -74,7 +74,8 @@ impl TerrainChunk {
     }
 
     pub fn update_noise_map(&self, generator: &TerrainGenerator) -> NoiseMap {
-        let mut noise_map = vec![vec![0f32; generator.chunk_size]; generator.chunk_size];
+        let size = generator.chunk_size + 1;
+        let mut noise_map = vec![vec![0f32; size]; size];
 
         if generator.noise_scale < 0.0 {
             panic!("Scale must be greater than 0");
@@ -83,60 +84,42 @@ impl TerrainChunk {
         let mut max_noise_height = f32::MIN;
         let mut min_noise_height = f32::MAX;
 
-        let half_size = generator.chunk_size as f32 / 2.0;
+        
+        let half_size = size as f32 / 2.0;
 
-        for y in 0..generator.chunk_size {
-            for x in 0..generator.chunk_size {
+        for y in 0..size {
+            for x in 0..size {
                 let pos = Vec2::new(
                     (x as f32 - half_size)
-                        + (self.position.x as f32 * generator.chunk_size as f32)
+                        + (self.position.x as f32 * size as f32)
                         + generator.offset.x,
                     (y as f32 - half_size)
-                        + (self.position.y as f32 * generator.chunk_size as f32)
+                        + (self.position.y as f32 * size as f32)
                         + generator.offset.y,
-                ) / (generator.noise_scale * generator.chunk_size as f32);
+                ) / (generator.noise_scale * size as f32);
 
-                let noise_height =
-                    fbm_simplex_2d(pos, generator.octaves, generator.lacunarity, generator.gain);
+                let mut noise_height = fbm_simplex_2d_seeded(pos, generator.octaves, generator.lacunarity, generator.gain, generator.seed);
 
-                if noise_height > max_noise_height {
-                    max_noise_height = noise_height;
-                } else if noise_height < min_noise_height {
-                    min_noise_height = noise_height;
-                }
-                noise_map[x][y] = noise_height;
+                // if noise_height > max_noise_height {
+                //     max_noise_height = noise_height;
+                // } else if noise_height < min_noise_height {
+                //     min_noise_height = noise_height;
+                // }
+                noise_height = noise_height * 0.25 + 0.5;  
+
+                noise_map[x][y] = noise_height.clamp(0.0, 1.0);
             }
         }
 
-        for y in 0..generator.chunk_size {
-            for x in 0..generator.chunk_size {
-                // inverse lerp?
-                noise_map[x][y] = ((noise_map[x][y] - min_noise_height)
-                    / (max_noise_height - min_noise_height))
-                    .abs();
-            }
-        }
+        // for y in 0..size {
+        //     for x in 0..size {
+        //         // inverse lerp?
+        //         noise_map[x][y] = ((noise_map[x][y] - min_noise_height)
+        //             / (max_noise_height - min_noise_height))
+        //             .abs();
+        //     }
+        // }
         noise_map
-    }
-
-    pub fn fbm_simplex_2d_seeded(
-        pos: Vec2,
-        octaves: usize,
-        lacunarity: f32,
-        gain: f32,
-        seed: f32,
-    ) -> f32 {
-        let mut sum = 0.;
-        let mut amplitude = 1.;
-        let mut frequency = 1.;
-
-        for _ in 0..octaves {
-            sum += simplex_noise_2d_seeded(pos * frequency, seed) * amplitude;
-            amplitude *= gain;
-            frequency *= lacunarity;
-        }
-
-        sum
     }
 
     pub fn generate_color_map_image(

@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "crates/example_common",
-    "crates/procedural_landmass"
+    "crates/procedural_landmass",
+    "crates/bevy_curve_editor",
 ]
 resolver = "2"
