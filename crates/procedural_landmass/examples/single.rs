@@ -16,9 +16,7 @@ fn main() {
 }
 
 fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut commands: Commands,    
 ) {
     // setup camera
     commands.spawn((
@@ -35,19 +33,6 @@ fn setup(
         transform: Transform::from_xyz(0.0, 1000.0, 1000.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..Default::default()
     });
-
-    // origin marker
-    // commands.spawn((
-    //     PbrBundle {
-    //         material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
-    //         mesh: meshes.add(Mesh::from(shape::Plane {
-    //             size: 10.0,
-    //             subdivisions: 10,
-    //         })),
-    //         ..default()
-    //     },
-    //     Name::new("Origin"),
-    // ));
 
     commands.spawn(TerrainChunkBundle::default());
 }

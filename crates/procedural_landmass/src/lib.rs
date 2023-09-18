@@ -1,16 +1,19 @@
 mod debug;
 mod endless_terrain;
 mod regions;
-mod terrain_chunk;
-mod terrain_generator;
+mod chunk;
+mod curve;
+mod generator;
+mod noise;
 
 use std::sync::Arc;
 
 use debug::wireframe::TerrainDebugWireframePlugin;
 pub use endless_terrain::*;
 pub use regions::*;
-pub use terrain_chunk::*;
-use terrain_generator::{TerrainGenerator, TerrainSampler};
+pub use chunk::*;
+use curve::TerrainCurve;
+use generator::{TerrainGenerator, TerrainSampler};
 
 use bevy::{
     prelude::*,
@@ -23,9 +26,10 @@ use bevy::{
 };
 use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 use futures_lite::future;
+use noise::{FMBSimplex, TerrainNoise};
 
 pub use crate::debug::wireframe::TerrainWireframeMode;
-use crate::terrain_generator::TerrainTextureMode;
+use crate::generator::TerrainTextureMode;
 
 type NoiseMap = Vec<Vec<f32>>;
 
@@ -45,7 +49,10 @@ impl Plugin for ProceduralLandmassPlugin {
         .register_type::<EndlessTerrain>()
         .register_type::<TerrainChunk>()
         .register_type::<TerrainRegions>()
-        .register_type::<TerrainType>();
+        .register_type::<TerrainType>()        
+        .register_type::<TerrainCurve>()
+        .register_type::<TerrainNoise>()
+        .register_type::<FMBSimplex>();
     }
 }
 
@@ -72,25 +79,19 @@ fn create_chunks(
     generator: Res<TerrainGenerator>,
 ) {
     if let Ok((mut endless, trans)) = endless_query.get_single_mut() {
-        let current_chunk_coord_x =  (trans.translation().x  / generator.world_scale as f32) as i32;
+        let current_chunk_coord_x = (trans.translation().x / generator.world_scale as f32) as i32;
         let current_chunk_coord_y = (trans.translation().z / generator.world_scale as f32) as i32;
 
         let chunks_visable_in_view_distance = endless.chunks_visable_in_view_distance as i32;
         for y in -chunks_visable_in_view_distance..=chunks_visable_in_view_distance {
             for x in -chunks_visable_in_view_distance..=chunks_visable_in_view_distance {
-                let chunk_coord = IVec2::new(
-                    current_chunk_coord_x + x,
-                    current_chunk_coord_y + y,
-                );
+                let chunk_coord = IVec2::new(current_chunk_coord_x + x, current_chunk_coord_y + y);
 
                 if endless.terrain_chunks.contains_key(&chunk_coord) {
                     // TODO
                 } else {
                     let entity = commands
-                        .spawn((TerrainChunkBundle::new(
-                            chunk_coord,
-                            false,
-                        ),))
+                        .spawn((TerrainChunkBundle::new(chunk_coord, false),))
                         .id();
                     endless.terrain_chunks.insert(chunk_coord, entity);
                 }
@@ -122,11 +123,13 @@ fn update_chunk_visablity(
         for (mut vis, chunk_trans) in query.iter_mut() {
             let chuck_translation = chunk_trans.translation;
 
-            let mut visable = false;            
-            for corner in corners.iter() {                
-                // gizmos.line( chuck_translation + *corner, chuck_translation + vec3(0.0, 50.0, 0.0), Color::RED);                
-                if endless_translation.distance(chuck_translation + *corner) <= endless.max_view_distance {
-                    visable = true;                
+            let mut visable = false;
+            for corner in corners.iter() {
+                // gizmos.line( chuck_translation + *corner, chuck_translation + vec3(0.0, 50.0, 0.0), Color::RED);
+                if endless_translation.distance(chuck_translation + *corner)
+                    <= endless.max_view_distance
+                {
+                    visable = true;
                 }
             }
 
@@ -167,14 +170,12 @@ fn spawn_chunk_tasks(
 
         let task = thread_pool.spawn(async move {
             // create noise map
-            let noise_map = chunk.update_noise_map(&generator);
+            let noise_map = generator.update_noise_map(chunk.position);
 
             // create image
             let image_data = match generator.texture_mode {
-                TerrainTextureMode::Color => chunk.generate_color_map_image(&noise_map, &generator),
-                TerrainTextureMode::HeightMap => {
-                    chunk.generate_height_map_image(&noise_map, &generator)
-                }
+                TerrainTextureMode::Color => generator.generate_color_map_image(&noise_map),
+                TerrainTextureMode::HeightMap => generator.generate_height_map_image(&noise_map),
             };
             let mut image = Image::new(
                 Extent3d {
@@ -193,12 +194,12 @@ fn spawn_chunk_tasks(
             };
 
             // create the mesh
-            let mesh = chunk.generate_mesh(&noise_map, &generator);
+            let mesh = generator.generate_mesh(&noise_map);
 
             ComputeResult {
                 image,
                 mesh,
-                noise_map,                
+                noise_map,
                 world_scale: generator.world_scale,
             }
         });

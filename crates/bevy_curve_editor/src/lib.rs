@@ -23,25 +23,7 @@ impl Plugin for BevyCurveEditorPlugin {
                 curve_ui,
                 curve_ui_readonly,
                 many_unimplemented::<Curve>,
-            ));                
-
-
-        //     "Curve",
-        //     InspectorType::new::<Curve>()
-        //         .ui(curve_ui)
-        //         .readonly_ui(curve_ui_readonly),
-        // let i = InspectorEguiImpl::new(
-        //     curve_ui,
-        //     curve_ui_readonly,
-        //     many_unimplemented::<Curve>,
-        // );
-        // let res = app.world.resource_mut::<AppTypeRegistry>();
-        // let mut r = res.write();
-        // app.register_type::
-
-
-        // r.get_mut(TypeId::of::<Curve>())
-        //     .insert);
+            ));                      
     }
 }
 
@@ -53,9 +35,9 @@ pub struct Curve {
 fn curve_ui(
     value: &mut dyn Any,
     ui: &mut egui::Ui,
-    options: &dyn Any,
-    id: egui::Id,
-    mut env: InspectorUi<'_, '_>,
+    _options: &dyn Any,
+    _id: egui::Id,
+    mut _env: InspectorUi<'_, '_>,
 ) -> bool {
     let curve = value.downcast_ref::<Curve>().unwrap();
     ui.label(format!("curve: {}", curve.selected_keyframe));
@@ -65,9 +47,9 @@ fn curve_ui(
 fn curve_ui_readonly(
     value: &dyn Any,
     ui: &mut egui::Ui,
-    options: &dyn Any,
-    id: egui::Id,
-    mut env: InspectorUi<'_, '_>,
+    _options: &dyn Any,
+    _id: egui::Id,
+    mut _env: InspectorUi<'_, '_>,
 ) {
     let curve = value.downcast_ref::<Curve>().unwrap();
     ui.label(format!("curve readonly: {}", curve.selected_keyframe));
