@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_variables)]
 use bevy::prelude::*;
 use example_common::prelude::*;
-use procedural_landmass::*;
+use procedural_landmass::prelude::*;
 
 fn main() {
     App::new()
@@ -11,7 +11,7 @@ fn main() {
             ExampleCommonPlugin,
         ))
         .add_systems(Startup, setup)
-        .add_systems(Update, toggle_wireframe)
+        .add_systems(Update, (toggle_wireframe, toggle_debug_rain))
         .run();
 }
 
@@ -46,6 +46,19 @@ fn toggle_wireframe(
         match terrain_wireframe.get() {
             TerrainWireframeMode::On => next_state.set(TerrainWireframeMode::Off),
             TerrainWireframeMode::Off => next_state.set(TerrainWireframeMode::On),
+        }
+    }
+}
+
+fn toggle_debug_rain(
+    state: Res<State<TerrainDebugRainMode>>,
+    mut next_state: ResMut<NextState<TerrainDebugRainMode>>,
+    keyboard_input: Res<Input<KeyCode>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Key2) {
+        match state.get() {
+            TerrainDebugRainMode::On => next_state.set(TerrainDebugRainMode::Off),
+            TerrainDebugRainMode::Off => next_state.set(TerrainDebugRainMode::On),
         }
     }
 }

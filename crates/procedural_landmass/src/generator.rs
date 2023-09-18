@@ -1,60 +1,54 @@
-use bevy::{prelude::*, render::{render_resource::PrimitiveTopology, mesh::Indices}};
-use bevy_inspector_egui::{prelude::*, inspector_options::std_options::NumberDisplay};
+use bevy::{
+    prelude::*,
+    render::{mesh::Indices, render_resource::PrimitiveTopology},
+};
+use bevy_inspector_egui::{inspector_options::std_options::NumberDisplay, prelude::*};
 
-use crate::{regions::TerrainRegions, NoiseMap, noise::TerrainNoise, curve::TerrainCurve};
+use crate::{noise::*, erosion::TerrainErosion, regions::TerrainRegions, NoiseMap};
 
 #[derive(Clone, Resource, Reflect, InspectorOptions)]
 #[reflect(Resource, InspectorOptions)]
 pub struct TerrainGenerator {
     // Terrain generation settings
+
+    #[inspector(min = 1,min = 1, max = 500, display = NumberDisplay::Slider)]
+    pub chunk_size: usize,
+    #[inspector(min = 0.01, max = 1000.0, display = NumberDisplay::Slider)]
+    pub world_scale: f32,
+    #[inspector(min = 0.0, max = 1.0, display = NumberDisplay::Slider)]
+    pub height_multiplier: f32,
+
     pub texture_mode: TerrainTextureMode,
     pub mesh_mode: TerrainMeshMode,
     pub sampler: TerrainSampler,
-    #[inspector(min = 1)]
-    pub chunk_size: usize,
-
-    #[inspector(min = 0.0, max = 1.0, display = NumberDisplay::Slider)]
-    pub height_multiplier: f32,
-    #[inspector(min = 0.01, max = 5.0, display = NumberDisplay::Slider)]
-    pub noise_scale: f32,
     pub noise: TerrainNoise,
-    pub curve: TerrainCurve,
-    pub offset: Vec2,
-    pub seed: f32,
-
-    pub world_scale: f32,
-
+    pub erosion: TerrainErosion,
     pub regions: TerrainRegions,
 }
 
 impl Default for TerrainGenerator {
     fn default() -> Self {
         Self {
-            chunk_size: 50,
+            chunk_size: 100,
             texture_mode: TerrainTextureMode::Color,
             mesh_mode: TerrainMeshMode::Smooth,
             sampler: TerrainSampler::Nearest,
             height_multiplier: 0.3,
-            noise_scale: 1.0,
             noise: TerrainNoise::default(),
-            curve: TerrainCurve::default(),
-            seed: 0.0,
-            offset: Vec2::ZERO,
-            world_scale: 100.0,
+            world_scale: 200.0,
             regions: TerrainRegions::default(),
+            erosion: TerrainErosion::default(),
         }
     }
 }
 
 impl TerrainGenerator {
-    pub fn update_noise_map(&self, position: IVec2) -> NoiseMap {
+    pub fn generate_noise_map(&self, position: IVec2) -> NoiseMap {
+
         let size = self.chunk_size + 1;
+        
         let mut noise_map = vec![vec![0f32; size]; size];
 
-        if self.noise_scale < 0.0 {
-            panic!("Terrain Noise Scale must be greater than 0");
-        }
-        
         let half_size = size as f32 / 2.0;
 
         for y in 0..size {
@@ -62,25 +56,31 @@ impl TerrainGenerator {
                 let pos = Vec2::new(
                     (x as f32 - half_size)
                         + (position.x as f32 * size as f32)
-                        + self.offset.x,
+                        + self.noise.offset.x,
                     (y as f32 - half_size)
                         + (position.y as f32 * size as f32)
-                        + self.offset.y,
-                ) / (self.noise_scale * size as f32);
+                        + self.noise.offset.y,
+                ) / (self.noise.scale * size as f32);
 
-                let noise_height = self.noise.get(pos, self.seed);
-                let height = self.curve.get(noise_height);
-
-                noise_map[x][y] = height;
+                noise_map[x][y] = self.noise.get(pos, self.noise.seed);
             }
         }
         noise_map
     }
 
-    pub fn generate_color_map_image(
-        &self,
-        noise_map: &NoiseMap,        
-    ) -> Vec<u8> {
+    pub fn generate_erosion(&self, map: &mut NoiseMap) -> Vec<Vec<Vec3>> {
+        match &self.erosion {
+            TerrainErosion::None => vec![],
+            TerrainErosion::Hydraulic(x) => x.erode(
+                map,
+                self.chunk_size,
+                self.world_scale,
+                self.height_multiplier,
+            ),
+        }
+    }
+
+    pub fn generate_color_map_image(&self, noise_map: &NoiseMap) -> Vec<u8> {
         let mut image_data = vec![0u8; (self.chunk_size * self.chunk_size) as usize * 4];
         for y in 0..self.chunk_size {
             for x in 0..self.chunk_size {
@@ -96,10 +96,7 @@ impl TerrainGenerator {
         image_data
     }
 
-    pub fn generate_height_map_image(
-        &self,
-        noise_map: &NoiseMap,        
-    ) -> Vec<u8> {
+    pub fn generate_height_map_image(&self, noise_map: &NoiseMap) -> Vec<u8> {
         let mut image_data = vec![0u8; (self.chunk_size * self.chunk_size) as usize * 4];
         for y in 0..self.chunk_size {
             for x in 0..self.chunk_size {
@@ -193,8 +190,6 @@ impl TerrainGenerator {
 
         mesh
     }
-
-
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Reflect)]
