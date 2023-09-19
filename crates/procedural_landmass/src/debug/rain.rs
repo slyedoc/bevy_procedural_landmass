@@ -1,21 +1,24 @@
 use bevy::prelude::*;
 use bevy_inspector_egui::{InspectorOptions, prelude::*};
 
+#[cfg(debug_rain)]
 use crate::{TerrainChunk, util::lerp_color};
 
 pub struct TerrainDebugRainPlugin;
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Debug, Hash, States)]
-pub enum TerrainDebugRainMode {
-    #[default]
+pub enum TerrainDebugRainMode {    
     On,
+    #[default]
     Off,
 }
 
 impl Plugin for TerrainDebugRainPlugin {
     fn build(&self, app: &mut App) {
-        app.add_state::<TerrainDebugRainMode>().add_systems(
-            Update,
+        app.add_state::<TerrainDebugRainMode>();
+        #[cfg(debug_rain)]
+        app.add_systems(
+            Update,            
             (draw_rain).run_if(in_state(TerrainDebugRainMode::On)),
         );
     }
@@ -25,9 +28,10 @@ impl Plugin for TerrainDebugRainPlugin {
 #[reflect(Component, InspectorOptions)]
 pub struct RainPaths(pub Vec<Vec<Vec3>>);
 
+#[cfg(debug_rain)]
 pub fn draw_rain(query: Query<(&RainPaths, &TerrainChunk)>, mut gizmos: Gizmos) {
     for (paths, _chunk) in query.iter() {
-        for path in paths.0.iter() {
+        for path in paths.0.iter().take(10) {
             for i in 0..path.len() - 1 {
                 // TODO: due to gismo draw order, bump points up a little to make them more visable
                 // remove once gimzo draw order is fixed

@@ -12,6 +12,7 @@ pub mod prelude {
     pub use crate::ExampleCommonPlugin;
     pub use crate::camera_controller::CameraController;
     pub use bevy_atmosphere::prelude::AtmosphereCamera;
+    
 }
 
 pub struct ExampleCommonPlugin;

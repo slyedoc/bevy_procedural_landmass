@@ -15,5 +15,7 @@ pretty-type-name = "1.0"
 example_common = { path = "../example_common" }
 
 [features]
+default = []
 debug_rain = []
+
 

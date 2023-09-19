@@ -15,6 +15,7 @@ impl Default for TerrainErosion {
     }
 }
 
+// Based on https://github.com/SebLague/Hydraulic-Erosion/blob/master/Assets/Scripts/Erosion.cs
 #[derive(Clone, Reflect, InspectorOptions)]
 #[reflect(InspectorOptions)]
 pub struct HydraulicErosion {
@@ -37,12 +38,13 @@ pub struct HydraulicErosion {
     initial_water_volume: f32,
     initial_speed: f32,
     pub seed: u64,
+
 }
 
 impl Default for HydraulicErosion {
     fn default() -> Self {
         Self {
-            iterations: 1000,
+            iterations: 100,
             erosion_radius: 3,
             inertia: 0.05,
             sediment_capacity_factor: 4.0,
@@ -51,7 +53,7 @@ impl Default for HydraulicErosion {
             deposit_speed: 0.3,
             evaporate_speed: 0.01,
             gravity: 4.0,
-            max_droplet_lifetime: 30,
+            max_droplet_lifetime: 10,
             initial_water_volume: 1.0,
             initial_speed: 1.0,
             seed: 0,
@@ -60,16 +62,29 @@ impl Default for HydraulicErosion {
 }
 
 impl HydraulicErosion {
-    pub fn erode(&self, map: &mut NoiseMap, map_size: usize, wolrd_scale: f32, height_multiplyer: f32) -> Vec<Vec<Vec3>> {
+    pub fn erode(&self, 
+        map: &mut NoiseMap, 
+        map_size: usize, 
+        #[cfg(debug_rain)]
+        wolrd_scale: f32,
+        #[cfg(debug_rain)]
+         height_multiplyer: f32
+        
+    ) -> Vec<Vec<Vec3>> {
+        
         let erosion_brushes = initialize_brushes(map_size, self.erosion_radius);
         
         // paths rain drops take, for debuging only
-        let mut rain_paths: Vec<Vec<Vec3>> = vec![vec![]; self.iterations];
+        #[cfg(debug_rain)] {
+        let mut rain_paths : Vec<Vec<Vec3>> = vec![vec![]; self.iterations];        
         let xy_rain_scale = wolrd_scale  as f32 / map_size as f32;
+        let half_size = map_size as f32 / 2.0;
+    }
+
         fastrand::seed(self.seed);
 
-        let half_size = map_size as f32 / 2.0;
-        for i in 0..self.iterations {
+        
+        for _ in 0..self.iterations {
             
             // Create water droplet at random point on map
             let mut pos_x = fastrand::f32() * (map_size - 1) as f32;
@@ -81,7 +96,7 @@ impl HydraulicErosion {
             let mut water = self.initial_water_volume;
             let mut sediment = 0.0;
 
-                        
+            #[cfg(debug_rain)]           
             rain_paths[i].push(Vec3 {
                 x: (pos_x - half_size) * xy_rain_scale,                
                 y: (map[pos_x as usize][pos_y as usize] * wolrd_scale * height_multiplyer) + 10.0,
@@ -91,8 +106,6 @@ impl HydraulicErosion {
             for _ in 0..self.max_droplet_lifetime {                
                 let node_x = pos_x as usize;
                 let node_y = pos_y as usize;
-
-                // pain_paths[i].push(Vec3::new((pos_x - half_size) * rain_scale, map[node_x][node_y] * map_size as f32, (pos_y - half_size) * rain_scale,));
 
                 // Calculate droplet's offset inside the cell
                 let cell_offset_x = pos_x - node_x as f32;
@@ -113,11 +126,13 @@ impl HydraulicErosion {
                 pos_x += dir_x;
                 pos_y += dir_y;
                 
+                #[cfg(debug_rain)]
                 rain_paths[i].push(Vec3 {
                     x: (pos_x - half_size) * xy_rain_scale,
                     y: map[node_x][node_y] * wolrd_scale * height_multiplyer,
                     z: (pos_y - half_size) * xy_rain_scale,
                 });
+
 
                 // Stop simulating droplet if it's not moving or has flowed over edge of map
                 if (dir_x == 0.0 && dir_y == 0.0)
@@ -140,29 +155,36 @@ impl HydraulicErosion {
 
                 // If carrying more sediment than capacity, or if flowing uphill:
                 if sediment > sediment_capacity || delta_height > 0.0 {
+                    
                     // If moving uphill try to fill up to the current height, otherwise deposit a fraction of the excess sediment
-                    let amount_to_deposit = if delta_height > 0.0 {
+                    let amount_to_deposit = if delta_height > 0.0 {                        
                         delta_height.min(sediment)
-                    } else {
+                    } else {                        
                         (sediment - sediment_capacity) * self.deposit_speed
                     };
                     sediment -= amount_to_deposit;
 
                     // Add the sediment to the four nodes of the current cell
-                    map[node_x][node_y] += amount_to_deposit * (1.0 - cell_offset_x) * (1.0 - cell_offset_y);
-                    map[node_x][node_y + 1] += amount_to_deposit * cell_offset_x * (1.0 - cell_offset_y);
-                    map[node_x + 1][node_y] += amount_to_deposit * (1.0 - cell_offset_x) * cell_offset_y;
-                    map[node_x + 1][node_y + 1] += amount_to_deposit * cell_offset_x * cell_offset_y;
+                     let ammount = (
+                        amount_to_deposit * (1.0 - cell_offset_x) * (1.0 - cell_offset_y),
+                        amount_to_deposit * (1.0 - cell_offset_x) * cell_offset_y,
+                        amount_to_deposit * cell_offset_x * (1.0 - cell_offset_y),
+                        amount_to_deposit * cell_offset_x * cell_offset_y
+                     );
+
+                    map[node_x][node_y] += ammount.0;
+                    map[node_x][node_y + 1] += ammount.1;
+                    map[node_x + 1][node_y] += ammount.2;
+                    map[node_x + 1][node_y + 1] += ammount.3;
                 } else {
                     // Erode a fraction of the droplet's current carry capacity
-                    let amount_to_erode =
-                        ((sediment_capacity - sediment) * self.erode_speed).min(-delta_height);
-
+                    let amount_to_erode = ((sediment_capacity - sediment) * self.erode_speed).min(-delta_height);                    
                     // Use erosion brush to erode from all nodes inside the droplet's erosion radius
                     for brush in erosion_brushes[node_x][node_y].iter() {
 
-                        let weighed_erode_amount = amount_to_erode * brush.weight;
+                        let weighed_erode_amount = amount_to_erode * brush.weight;                        
                         let delta_sediment = map[brush.x][brush.y].min(weighed_erode_amount);
+
                         map[brush.x][brush.y] -= delta_sediment;
                         sediment += delta_sediment;
                     }
@@ -173,7 +195,16 @@ impl HydraulicErosion {
                 water *= 1.0 - self.evaporate_speed;
             }
         }
-        rain_paths
+        
+            
+        
+
+        #[cfg(debug_rain)]
+        rain_paths;
+
+        vec![]
+
+
     }
 }
 
@@ -245,6 +276,7 @@ fn calculate_height_and_gradient(
     pos_x: f32,
     pos_y: f32,
 ) -> HeightAndGradient {
+    
     let coord_x = pos_x as usize;
     let coord_y = pos_y as usize;
 
@@ -257,10 +289,10 @@ fn calculate_height_and_gradient(
         panic!("Coordinates exceed map dimensions");
     } 
     // Calculate heights of the four nodes of the droplet's cell
-    let height_nw = map[coord_y][coord_x];
-    let height_ne = map[coord_y][coord_x + 1];
-    let height_sw = map[coord_y + 1][coord_x];
-    let height_se = map[coord_y + 1][coord_x + 1];
+    let height_nw = map[coord_x][coord_y];
+    let height_ne = map[coord_x][coord_y + 1];
+    let height_sw = map[coord_x + 1][coord_y];
+    let height_se = map[coord_x + 1][coord_y + 1];
 
     // Calculate droplet's direction of flow with bilinear interpolation of height difference along the edges
     let gradient_y = (height_ne - height_nw) * (1.0 - y) + (height_se - height_sw) * y;

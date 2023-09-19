@@ -11,7 +11,7 @@ use crate::{noise::*, erosion::TerrainErosion, regions::TerrainRegions, NoiseMap
 pub struct TerrainGenerator {
     // Terrain generation settings
 
-    #[inspector(min = 1,min = 1, max = 500, display = NumberDisplay::Slider)]
+    #[inspector(min = 2, max = 500, display = NumberDisplay::Slider)]
     pub chunk_size: usize,
     #[inspector(min = 0.01, max = 1000.0, display = NumberDisplay::Slider)]
     pub world_scale: f32,
@@ -29,13 +29,13 @@ pub struct TerrainGenerator {
 impl Default for TerrainGenerator {
     fn default() -> Self {
         Self {
-            chunk_size: 100,
+            chunk_size: 255,
             texture_mode: TerrainTextureMode::Color,
-            mesh_mode: TerrainMeshMode::Smooth,
+            mesh_mode: TerrainMeshMode::Flat,
             sampler: TerrainSampler::Nearest,
             height_multiplier: 0.3,
             noise: TerrainNoise::default(),
-            world_scale: 200.0,
+            world_scale: 500.0,
             regions: TerrainRegions::default(),
             erosion: TerrainErosion::default(),
         }
@@ -68,15 +68,17 @@ impl TerrainGenerator {
         noise_map
     }
 
-    pub fn generate_erosion(&self, map: &mut NoiseMap) -> Vec<Vec<Vec3>> {
+    pub fn generate_erosion(&self, map: &mut NoiseMap) -> Option<Vec<Vec<Vec3>>> {
         match &self.erosion {
-            TerrainErosion::None => vec![],
-            TerrainErosion::Hydraulic(x) => x.erode(
+            TerrainErosion::None => None,
+            TerrainErosion::Hydraulic(x) => Some(x.erode(
                 map,
                 self.chunk_size,
+                #[cfg(debug_rain)]
                 self.world_scale,
+                #[cfg(debug_rain)]
                 self.height_multiplier,
-            ),
+            )),
         }
     }
 

@@ -9,6 +9,7 @@ pub fn lerp(a: f32, b: f32, t: f32) -> f32 {
     a * (1.0 - t) + b * t
 }
 
+#[allow(dead_code)]
 pub(crate) fn lerp_color( a: Color, b: Color, t: f32) -> Color {
     Color::rgb(
         lerp(a.r(), b.r(), t),

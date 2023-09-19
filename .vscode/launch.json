@@ -45,15 +45,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug example 'main'",
+            "name": "Debug example 'single'",
             "cargo": {
                 "args": [
                     "build",
-                    "--example=main",
+                    "--example=single",
                     "--package=procedural_landmass"
                 ],
                 "filter": {
-                    "name": "main",
+                    "name": "single",
                     "kind": "example"
                 }
             },
@@ -63,16 +63,53 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in example 'main'",
+            "name": "Debug unit tests in example 'single'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--example=main",
+                    "--example=single",
                     "--package=procedural_landmass"
                 ],
                 "filter": {
-                    "name": "main",
+                    "name": "single",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug example 'endless'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--example=endless",
+                    "--package=procedural_landmass"
+                ],
+                "filter": {
+                    "name": "endless",
+                    "kind": "example"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in example 'endless'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--example=endless",
+                    "--package=procedural_landmass"
+                ],
+                "filter": {
+                    "name": "endless",
                     "kind": "example"
                 }
             },

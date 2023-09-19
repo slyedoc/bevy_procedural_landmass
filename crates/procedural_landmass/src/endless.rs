@@ -14,8 +14,8 @@ pub struct EndlessTerrain {
 impl Default for EndlessTerrain {
     fn default() -> Self {
         Self {
-            max_view_distance: 500.0,
-            chunks_visable_in_view_distance: 5,
+            max_view_distance: 2_000.0,
+            chunks_visable_in_view_distance: 2,
             terrain_chunks: HashMap::default(),
         }
     }

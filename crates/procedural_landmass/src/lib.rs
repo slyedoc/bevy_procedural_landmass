@@ -2,17 +2,17 @@ mod chunk;
 mod debug;
 mod egui_helper;
 mod endless;
+mod erosion;
 mod generator;
 mod noise;
 mod regions;
 mod util;
-mod erosion;
 
 use std::sync::Arc;
 
-use debug::{TerrainDebugWireframePlugin, TerrainDebugRainPlugin, RainPaths};
-use regions::*;
+use debug::RainPaths;
 use noise::*;
+use regions::*;
 
 use erosion::*;
 
@@ -31,23 +31,23 @@ use bevy::{
     },
     tasks::{AsyncComputeTaskPool, Task},
 };
-use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 use futures_lite::future;
-
 
 use crate::generator::TerrainTextureMode;
 
 pub mod prelude {
     pub use crate::{
-        debug::{TerrainDebugRainMode, TerrainWireframeMode},
-        
         chunk::TerrainChunkBundle,
+        debug::{
+            TerrainDebugRainMode, TerrainDebugRainPlugin, TerrainDebugWireframePlugin,
+            TerrainWireframeMode,
+        },
         endless::EndlessTerrain,
+        erosion::*,
         generator::{TerrainGenerator, TerrainSampler},
         noise::*,
         regions::*,
         util::*,
-        erosion::*,
         ProceduralLandmassPlugin,
     };
 }
@@ -58,31 +58,26 @@ pub struct ProceduralLandmassPlugin;
 
 impl Plugin for ProceduralLandmassPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((            
-            TerrainDebugWireframePlugin,
-            TerrainDebugRainPlugin,
-            ResourceInspectorPlugin::<TerrainGenerator>::default(),
-        ))
-        .add_systems(PreUpdate, (update_endless, create_chunks).chain())
-        .add_systems(Update, (update_chunk_visablity, generator_changed).chain())
-        .add_systems(Update, (spawn_chunk_tasks, handle_check_tasks))
-        .insert_resource(TerrainGenerator::default())
-        .register_type::<TerrainGenerator>()
-        .register_type::<EndlessTerrain>()
-        .register_type::<TerrainChunk>()
-        .register_type::<TerrainRegions>()
-        .register_type::<TerrainType>()
-        .register_type::<TerrainErosion>()
-        .register_type::<TerrainCurve>()
-        .register_type::<TerrainCurveMode>()
-        .register_type::<TerrainNoise>()
-        .register_type::<TerrainNoiseMode>()
-        .register_type::<FMBSimplex>()
-        .register_type::<HydraulicErosion>();
+        app.add_systems(PreUpdate, (update_endless, create_chunks).chain())
+            .add_systems(Update, (update_chunk_visablity, generator_changed).chain())
+            .add_systems(Update, (spawn_chunk_tasks, handle_check_tasks))
+            .insert_resource(TerrainGenerator::default())
+            //.register_type::<TerrainGenerator>()
+            .register_type::<EndlessTerrain>()
+            .register_type::<TerrainChunk>()
+            .register_type::<TerrainRegions>()
+            .register_type::<TerrainType>()
+            .register_type::<TerrainErosion>()
+            .register_type::<TerrainCurve>()
+            .register_type::<TerrainCurveMode>()
+            .register_type::<TerrainNoise>()
+            .register_type::<TerrainNoiseMode>()
+            .register_type::<FMBSimplex>()
+            .register_type::<HydraulicErosion>();
 
         // add custom renders
-        let type_registry = app.world.resource::<AppTypeRegistry>();
-        noise::egui::register_ui(type_registry);
+        //let type_registry = app.world.resource::<AppTypeRegistry>();
+        //noise::egui::register_ui(type_registry);
     }
 }
 
@@ -177,7 +172,7 @@ struct ComputeResult {
     #[allow(dead_code)]
     noise_map: NoiseMap,
     world_scale: f32,
-    rain_paths: Vec<Vec<Vec3>>,
+    rain_paths: Option<Vec<Vec<Vec3>>>,
 }
 
 #[derive(Component)]
@@ -201,10 +196,9 @@ fn spawn_chunk_tasks(
 
         let task = thread_pool.spawn(async move {
             // create noise map
+            #[allow(unused_mut)]
             let mut noise_map = generator.generate_noise_map(chunk.position);
 
-            
-            // TODO: remove paths, using them to debug right now
             let rain_paths = generator.generate_erosion(&mut noise_map);
 
             // create image
@@ -242,9 +236,6 @@ fn spawn_chunk_tasks(
         commands.entity(e).insert(ComputeChunk(task));
     }
 }
-
-
-
 
 fn handle_check_tasks(
     mut commands: Commands,
@@ -290,7 +281,9 @@ fn handle_check_tasks(
             *mesh = meshes.add(result.mesh);
 
             // TODO: remove this, using it to debug right now
-            commands.entity(e).insert(RainPaths(result.rain_paths));
+            if let Some(paths) = result.rain_paths {
+                commands.entity(e).insert(RainPaths(paths));
+            }
 
             // Update AABB
             // Hack: See https://github.com/bevyengine/bevy/issues/4294
