@@ -1,26 +1,38 @@
 #![allow(dead_code, unused_variables)]
-use bevy::prelude::*;
-use bevy_inspector_egui::quick::{WorldInspectorPlugin, ResourceInspectorPlugin};
+use bevy::{pbr::{NotShadowCaster, PbrPlugin}, prelude::*, core_pipeline::prepass::DepthPrepass};
+use bevy_procedural_landmass::prelude::*;
 use example_common::prelude::*;
-use procedural_landmass::prelude::*;
 
 fn main() {
     App::new()
-        .add_plugins((            
-            // ProceduralLandmassPlugin,
-            // TerrainDebugWireframePlugin,
-            // TerrainDebugRainPlugin,
-
-            //ResourceInspectorPlugin::<TerrainGenerator>::default(),
-            //WorldInspectorPlugin::default(),
+        .add_plugins((
+            DefaultPlugins
+                .set(PbrPlugin {
+                    // The prepass is enabled by default on the StandardMaterial,
+                    // but you can disable it if you need to.
+                    //
+                    // prepass_enabled: false,
+                    ..default()
+                })
+                .set(bevy_log_plugin()),
+            ProceduralLandmassPlugin,
+            TerrainDebugWireframePlugin,
+            TerrainDebugRainPlugin,
+            WaterPlugin,
+            // some quality of life stuff for examples
             ExampleCommonPlugin,
         ))
         .add_systems(Startup, setup)
-        .add_systems(Update, (toggle_wireframe, toggle_debug_rain))
+        .add_systems(Update, (inspector_ui, toggle_wireframe, toggle_debug_rain))
+        .insert_resource(Msaa::Sample4)
         .run();
 }
 
-fn setup(mut commands: Commands) {
+fn setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut water_materials: ResMut<Assets<WaterMaterial>>,
+) {
     // setup camera
     commands.spawn((
         Camera3dBundle {
@@ -28,7 +40,8 @@ fn setup(mut commands: Commands) {
             projection: PerspectiveProjection {
                 far: 10_000.0,
                 ..Default::default()
-            }.into(),
+            }
+            .into(),
             ..Default::default()
         },
         CameraController,
@@ -45,6 +58,7 @@ fn setup(mut commands: Commands) {
                 Color::rgb(0.8, 0.844, 1.0), // atmospheric inscattering color (light gained due to scattering from the sun)
             ),
         },
+        DepthPrepass,
     ));
 
     // setup light
@@ -52,30 +66,19 @@ fn setup(mut commands: Commands) {
         transform: Transform::from_xyz(0.0, 1000.0, 1000.0).looking_at(Vec3::ZERO, Vec3::Y),
         ..Default::default()
     });
-}
 
-fn toggle_wireframe(
-    state: Res<State<TerrainWireframeMode>>,
-    mut next_state: ResMut<NextState<TerrainWireframeMode>>,
-    keyboard_input: Res<Input<KeyCode>>,
-) {
-    if keyboard_input.just_pressed(KeyCode::Key1) {
-        match state.get() {
-            TerrainWireframeMode::On => next_state.set(TerrainWireframeMode::Off),
-            TerrainWireframeMode::Off => next_state.set(TerrainWireframeMode::On),
-        }
-    }
-}
-
-fn toggle_debug_rain(
-    state: Res<State<TerrainDebugRainMode>>,
-    mut next_state: ResMut<NextState<TerrainDebugRainMode>>,
-    keyboard_input: Res<Input<KeyCode>>,
-) {
-    if keyboard_input.just_pressed(KeyCode::Key2) {
-        match state.get() {
-            TerrainDebugRainMode::On => next_state.set(TerrainDebugRainMode::Off),
-            TerrainDebugRainMode::Off => next_state.set(TerrainDebugRainMode::On),
-        }
-    }
+    // setup water
+    commands.spawn((
+        MaterialMeshBundle {
+            transform: Transform::from_xyz(0.0, 50.0, 0.0), // move water up a bit
+            mesh: meshes.add(Mesh::from(shape::Plane {
+                size: 10000.0,
+                subdivisions: 1,
+            })),
+            material: water_materials.add(WaterMaterial::default()),
+            ..default()
+        },
+        NotShadowCaster,
+        Name::new("Water"),
+    ));
 }

@@ -1,4 +1,7 @@
-use bevy::{prelude::*, pbr::wireframe::Wireframe};
+use bevy::{
+    pbr::wireframe::{Wireframe, WireframePlugin},
+    prelude::*,
+};
 
 use crate::TerrainChunk;
 
@@ -13,8 +16,14 @@ pub enum TerrainWireframeMode {
 
 impl Plugin for TerrainDebugWireframePlugin {
     fn build(&self, app: &mut App) {
+        if !app.is_plugin_added::<WireframePlugin>() {            
+            app.add_plugins(WireframePlugin);
+        } 
         app.add_state::<TerrainWireframeMode>()
-            .add_systems(Update, (add_wireframes).run_if(in_state(TerrainWireframeMode::On)))
+            .add_systems(
+                Update,
+                (add_wireframes).run_if(in_state(TerrainWireframeMode::On)),
+            )
             .add_systems(OnEnter(TerrainWireframeMode::Off), remove_wireframe);
     }
 }
@@ -32,7 +41,7 @@ fn remove_wireframe(
     mut commands: Commands,
     query: Query<Entity, (With<TerrainChunk>, With<Wireframe>)>,
 ) {
-    for entity in query.iter() {        
+    for entity in query.iter() {
         commands.entity(entity).remove::<Wireframe>();
     }
 }

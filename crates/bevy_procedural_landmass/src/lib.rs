@@ -7,7 +7,7 @@ mod generator;
 mod noise;
 mod regions;
 mod util;
-
+mod water;
 use std::sync::Arc;
 
 use debug::RainPaths;
@@ -49,6 +49,7 @@ pub mod prelude {
         regions::*,
         util::*,
         ProceduralLandmassPlugin,
+        water::*
     };
 }
 
@@ -58,7 +59,8 @@ pub struct ProceduralLandmassPlugin;
 
 impl Plugin for ProceduralLandmassPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PreUpdate, (update_endless, create_chunks).chain())
+        app
+            .add_systems(PreUpdate, (update_endless, create_chunks).chain())
             .add_systems(Update, (update_chunk_visablity, generator_changed).chain())
             .add_systems(Update, (spawn_chunk_tasks, handle_check_tasks))
             .insert_resource(TerrainGenerator::default())

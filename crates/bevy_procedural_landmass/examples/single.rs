@@ -1,7 +1,8 @@
 #![allow(dead_code, unused_variables)]
 use bevy::prelude::*;
-use example_common::prelude::*;
-use procedural_landmass::prelude::*;
+use bevy_inspector_egui::quick::ResourceInspectorPlugin;
+use example_common::{prelude::*, toggle_wireframe, toggle_debug_rain, inspector_ui};
+use bevy_procedural_landmass::prelude::*;
 
 // Note: Needs debug_rain feature enabled in the procedural_landmass
 
@@ -10,11 +11,16 @@ fn main() {
     App::new()
         .add_plugins((
             DefaultPlugins,
+
+            // our plugins            
             ProceduralLandmassPlugin,
+            TerrainDebugWireframePlugin,
+            TerrainDebugRainPlugin,            
+            
             ExampleCommonPlugin,
         ))
         .add_systems(Startup, setup)
-        .add_systems(Update, (toggle_wireframe, toggle_debug_rain))
+        .add_systems(Update, (inspector_ui, toggle_wireframe, toggle_debug_rain))
         .run();
 }
 
@@ -49,30 +55,4 @@ fn setup(
     });
 
     commands.spawn(TerrainChunkBundle::default());
-}
-
-fn toggle_wireframe(
-    terrain_wireframe: Res<State<TerrainWireframeMode>>,
-    mut next_state: ResMut<NextState<TerrainWireframeMode>>,
-    keyboard_input: Res<Input<KeyCode>>,
-) {
-    if keyboard_input.just_pressed(KeyCode::Key1) {
-        match terrain_wireframe.get() {
-            TerrainWireframeMode::On => next_state.set(TerrainWireframeMode::Off),
-            TerrainWireframeMode::Off => next_state.set(TerrainWireframeMode::On),
-        }
-    }
-}
-
-fn toggle_debug_rain(
-    state: Res<State<TerrainDebugRainMode>>,
-    mut next_state: ResMut<NextState<TerrainDebugRainMode>>,
-    keyboard_input: Res<Input<KeyCode>>,
-) {
-    if keyboard_input.just_pressed(KeyCode::Key2) {
-        match state.get() {
-            TerrainDebugRainMode::On => next_state.set(TerrainDebugRainMode::Off),
-            TerrainDebugRainMode::Off => next_state.set(TerrainDebugRainMode::On),
-        }
-    }
 }

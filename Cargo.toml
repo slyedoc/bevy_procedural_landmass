@@ -1,7 +1,10 @@
 [workspace]
 members = [
     "crates/example_common",
-    "crates/procedural_landmass",
+    "crates/bevy_procedural_landmass",
 ]
 resolver = "2"
+
+[profile.dev]
+opt-level = 1 # Use slightly better optimization, so examples work
 

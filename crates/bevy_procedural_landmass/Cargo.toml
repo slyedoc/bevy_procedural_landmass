@@ -1,5 +1,5 @@
 [package]
-name = "procedural_landmass"
+name = "bevy_procedural_landmass"
 version = "0.1.0"
 edition = "2021"
 
@@ -10,7 +10,8 @@ futures-lite = "1.11.3"
 noisy_bevy = "0.4"
 fastrand = "2.0.0"
 pretty-type-name = "1.0"
-
+#bevy_xpbd_3d = "0.2"
+bevy_xpbd_3d = { git = "https://github.com/Jondolf/bevy_xpbd", branch = "main" }
 [dev-dependencies]
 example_common = { path = "../example_common" }
 

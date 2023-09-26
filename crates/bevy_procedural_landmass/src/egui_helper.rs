@@ -46,3 +46,28 @@ fn layout_job(text: &[(egui::FontId, &str)]) -> egui::epaint::text::LayoutJob {
     }
     job
 }
+
+// pub fn insert_options_struct<T: 'static>(
+//     type_registry: & AppTypeRegistry,
+//     fields: &[(&'static str, &dyn TypeData)],
+// ) {
+
+//     let mut type_registry = type_registry.write();
+
+//     let Some(registration) = type_registry.get_mut(std::any::TypeId::of::<T>()) else {
+//         warn!("Attempting to set default inspector options for {}, but it wasn't registered in the type registry.", std::any::type_name::<T>());
+//         return;
+//     };
+//     if registration.data::<ReflectInspectorOptions>().is_none() {
+//         let mut options = InspectorOptions::new();
+//         for (field, data) in fields {
+//             let info = match registration.type_info() {
+//                 TypeInfo::Struct(info) => info,
+//                 _ => unreachable!(),
+//             };
+//             let field_index = info.index_of(field).unwrap();
+//             options.insert_boxed(Target::Field(field_index), TypeData::clone_type_data(*data));
+//         }
+//         registration.insert(ReflectInspectorOptions(options));
+//     }
+// }
